@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  primary:
+    build: ./primary
+    container_name: postgres-primary
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - REPLICATION_USER=${REPLICATION_USER}
+      - REPLICATION_PASSWORD=${REPLICATION_PASSWORD}
+    ports:
+      - "5432:5432"
+    networks:
+      - pg-network
+    volumes:
+      - primary_data:/var/lib/postgresql/data
+
+  replica:
+    build: ./replica
+    container_name: postgres-replica
+    depends_on:
+      - primary
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - REPLICATION_USER=${REPLICATION_USER}
+      - REPLICATION_PASSWORD=${REPLICATION_PASSWORD}
+    networks:
+      - pg-network
+    volumes:
+      - replica_data:/var/lib/postgresql/data
+
+  failover:
+    build: ./failover
+    container_name: pg-failover
+    depends_on:
+      - primary
+      - replica
+    networks:
+      - pg-network
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+networks:
+  pg-network:
+
+volumes:
+  primary_data:
+  replica_data:
